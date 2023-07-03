@@ -1,0 +1,3 @@
+authentication:
+  jwt:
+    secret: "qwe123qwe123qwe123qwe123qwe123qwe123qwe123"

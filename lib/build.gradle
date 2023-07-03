@@ -1,0 +1,58 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+version = '0.0.1'
+group = 'com.github.lehadnk'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(20)
+    }
+    withSourcesJar()
+}
+
+jar {
+    enabled = true
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+
+    // todo replace with spring context
+    implementation 'org.springframework.boot:spring-boot-starter-web:3.0.5'
+
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(20)
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication){
+            artifactId = 'authentication'
+            from components.java
+        }
+    }
+//    repositories {
+//        maven {
+//            name = "GitHubPackages"
+//            url = "https://maven.pkg.github.com/lehadnk/spring-adminlte"
+//            credentials {
+//                username = System.getenv("GITHUB_USERNAME")
+//                password = System.getenv("GITHUB_TOKEN")
+//            }
+//        }
+//    }
+}
