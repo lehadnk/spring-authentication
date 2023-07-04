@@ -4,7 +4,6 @@ import authentication.access_token.dto.ValidateAccessTokenResult;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.jwt.JwtService;
-import authentication.jwt.dto.DecodeTokenResult;
 import authentication.jwt.dto.TokenBody;
 import authentication.jwt.dto.TokenType;
 import authentication.token_storage.TokenStorageService;

@@ -4,7 +4,7 @@ plugins {
     id 'jacoco'
 }
 
-version = '0.0.1'
+version = '0.1.0'
 group = 'com.github.lehadnk'
 
 java {
@@ -24,7 +24,6 @@ repositories {
 
 dependencies {
     testImplementation 'junit:junit:4.13.2'
-//    testImplementation 'org.jacoco:jacoco-maven-plugin:0.8.5'
 
     // todo replace with spring context
     implementation 'org.springframework.boot:spring-boot-starter-web:3.0.5'
