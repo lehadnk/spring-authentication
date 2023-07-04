@@ -6,6 +6,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class JwtBeanConfiguration {
     @Bean
+    public JwtService createJwtService(
+            JwtFactory jwtFactory
+    ) {
+        return new JwtService(jwtFactory);
+    }
+
+    @Bean
     public JwtFactory createJwtFactory(
             JwtConfig jwtConfig
     ) {
