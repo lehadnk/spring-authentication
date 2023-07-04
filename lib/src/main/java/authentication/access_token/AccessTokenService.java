@@ -1,27 +1,34 @@
-package authentication.authentication_token;
+package authentication.access_token;
 
+import authentication.access_token.dto.ValidateAccessTokenResult;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.jwt.JwtService;
+import authentication.jwt.dto.DecodeTokenResult;
 import authentication.jwt.dto.TokenBody;
 import authentication.jwt.dto.TokenType;
 import authentication.token_storage.TokenStorageService;
+import authentication.validation.ValidationService;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.time.Instant;
 
-public class AuthenticationTokenService {
+public class AccessTokenService {
     private final JwtService jwtService;
     private final ContextService contextService;
     private final TokenStorageService tokenStorageService;
+    private final ValidationService validationService;
 
-    public AuthenticationTokenService(
+    public AccessTokenService(
             JwtService jwtService,
             ContextService contextService,
-            TokenStorageService tokenStorageService
+            TokenStorageService tokenStorageService,
+            ValidationService validationService
     ) {
         this.jwtService = jwtService;
         this.contextService = contextService;
         this.tokenStorageService = tokenStorageService;
+        this.validationService = validationService;
     }
 
     public <TContextObject, TAccessTokenPayloadObject> String issueAccessToken(String contextName, TContextObject contextObject)
@@ -39,5 +46,22 @@ public class AuthenticationTokenService {
         this.tokenStorageService.addTokenToStorage(contextName, tokenString);
 
         return tokenString;
+    }
+
+    public <TTokenBodyType, TContextObjectType> ValidateAccessTokenResult<TContextObjectType> validateAuthenticationToken(String contextName, String token, TypeReference<TokenBody<TTokenBodyType>> tokenBodyTypeReference)
+    {
+        var decodeTokenResult = this.jwtService.decodeToken(token, tokenBodyTypeReference);
+        this.validationService.validateToken(token, decodeTokenResult);
+
+        var validateAccessTokenResult = new ValidateAccessTokenResult<TContextObjectType>();
+        if (decodeTokenResult.isTokenValid) {
+            validateAccessTokenResult.isValid = true;
+            AuthorizationContextProviderInterface<TContextObjectType, ?, ?> context = this.contextService.getContextByName(contextName);
+            validateAccessTokenResult.contextObject = context.getContextObjectById(decodeTokenResult.tokenBody.id);
+        } else {
+            validateAccessTokenResult.isValid = false;
+        }
+
+        return validateAccessTokenResult;
     }
 }

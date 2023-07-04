@@ -17,11 +17,12 @@ public class TokenDecoder<T> {
     }
 
     public DecodeTokenResult<T> decode(String token, TypeReference<TokenBody<T>> tokenBodyTypeReference) {
-        var subject = this.jwtParser.parseClaimsJws(token).getBody().getSubject();
         var result = new DecodeTokenResult<T>();
-        var objectMapper = new ObjectMapper();
 
         try {
+            var subject = this.jwtParser.parseClaimsJws(token).getBody().getSubject();
+            var objectMapper = new ObjectMapper();
+
             var tokenBody = objectMapper.readValue(subject, tokenBodyTypeReference);
             result.isTokenValid = true;
             result.tokenBody = tokenBody;

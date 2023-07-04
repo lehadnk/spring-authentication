@@ -1,6 +1,6 @@
 package authentication.refresh_token;
 
-import authentication.authentication_token.AuthenticationTokenService;
+import authentication.access_token.AccessTokenService;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.jwt.JwtService;
@@ -16,20 +16,20 @@ import java.time.Instant;
 public class RefreshTokenService {
     private final ContextService contextService;
     private final JwtService jwtService;
-    private final AuthenticationTokenService authenticationTokenService;
+    private final AccessTokenService accessTokenService;
     private final ValidationService validationService;
     private final TokenStorageService tokenStorageService;
 
     public RefreshTokenService(
             ContextService contextService,
             JwtService jwtService,
-            AuthenticationTokenService authenticationTokenService,
+            AccessTokenService accessTokenService,
             ValidationService validationService,
             TokenStorageService tokenStorageService
     ) {
         this.contextService = contextService;
         this.jwtService = jwtService;
-        this.authenticationTokenService = authenticationTokenService;
+        this.accessTokenService = accessTokenService;
         this.validationService = validationService;
         this.tokenStorageService = tokenStorageService;
     }
@@ -69,7 +69,7 @@ public class RefreshTokenService {
         }
 
         var contextObject = context.getContextObjectById(decodedToken.tokenBody.id);
-        tokenExchangeResult.accessToken = this.authenticationTokenService.issueAccessToken(contextName, contextObject);
+        tokenExchangeResult.accessToken = this.accessTokenService.issueAccessToken(contextName, contextObject);
         tokenExchangeResult.isSuccess = true;
         return tokenExchangeResult;
     }

@@ -1,7 +1,7 @@
 package authentication;
 
 import authentication.app.UserAuthorizationContext;
-import authentication.authentication_token.AuthenticationTokenService;
+import authentication.access_token.AccessTokenService;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.context.exceptions.AuthorizationContextInitializationException;
@@ -46,12 +46,14 @@ public class TestFactory {
         }
     }
 
-    public AuthenticationTokenService createAuthenticationTokenService()
+    public AccessTokenService createAccessTokenService()
     {
-        return new AuthenticationTokenService(
+        var tokenStorageService = this.createTokenStorageService();
+        return new AccessTokenService(
                 this.createJwtService(),
                 this.createContextService(),
-                this.createTokenStorageService()
+                tokenStorageService,
+                new ValidationService(tokenStorageService)
         );
     }
 
@@ -64,12 +66,13 @@ public class TestFactory {
 
     public RefreshTokenService createRefreshTokenService()
     {
+        var tokenStorageService = this.createTokenStorageService();
         return new RefreshTokenService(
                 this.createContextService(),
                 this.createJwtService(),
-                this.createAuthenticationTokenService(),
-                this.createValidationService(),
-                this.createTokenStorageService()
+                this.createAccessTokenService(),
+                new ValidationService(tokenStorageService),
+                tokenStorageService
         );
     }
 
