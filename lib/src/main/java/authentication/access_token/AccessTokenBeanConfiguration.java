@@ -15,8 +15,7 @@ public class AccessTokenBeanConfiguration {
             ContextService contextService,
             TokenStorageService tokenStorageService,
             ValidationService validationService
-    )
-    {
+    ) {
         return new AccessTokenService(
                 jwtService,
                 contextService,

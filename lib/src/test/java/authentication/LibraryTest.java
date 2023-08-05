@@ -8,6 +8,8 @@ import authentication.app.UserRefreshTokenPayload;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.context.exceptions.AuthorizationContextInitializationException;
+import authentication.jwt.JwtFactory;
+import authentication.jwt.JwtService;
 import authentication.jwt.dto.TokenBody;
 import authentication.jwt.dto.TokenType;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -150,12 +152,6 @@ public class LibraryTest {
     }
 
     @Test
-    public void testDecodeMalformedToken()
-    {
-        var authenticationService = this.testFactory.createAccessTokenService();
-    }
-
-    @Test
     public void testValidateAccessToken()
     {
         var user = new User();
@@ -177,5 +173,33 @@ public class LibraryTest {
         var validateAccessTokenResult = accessTokenService.validateAuthenticationToken("user", "qwe123", LibraryTest.userAccessTokenPayloadReference);
         assertFalse(validateAccessTokenResult.isValid);
         assertNull(validateAccessTokenResult.contextObject);
+    }
+
+    @Test
+    public void testDecodeMalformedToken()
+    {
+        var jwtService = this.testFactory.createJwtService();
+        var tokenDecodeResult = jwtService.decodeToken("Bearer qwe", LibraryTest.userAccessTokenPayloadReference);
+        assertFalse(tokenDecodeResult.isTokenValid);
+    }
+
+    @Test
+    public void testDecodeTokenSignedWithIncorrectKey()
+    {
+        var jwtFactory1 = new JwtFactory("testtesttesttesttesttesttesttesttesttesttesttest");
+        var jwtService1 = new JwtService(jwtFactory1);
+
+        var tokenBody = new TokenBody<UserAccessTokenPayload>();
+        tokenBody.id = "1";
+        tokenBody.context = "user";
+        tokenBody.expiresAt = 1688153468L;
+
+        var tokenGeneratedByService1 = jwtService1.encodeToken(tokenBody);
+
+        var jwtFactory2 = new JwtFactory("qweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqwe");
+        var jwtService2 = new JwtService(jwtFactory2);
+
+        var tokenDecodeResult = jwtService2.decodeToken(tokenGeneratedByService1, LibraryTest.userAccessTokenPayloadReference);
+        assertFalse(tokenDecodeResult.isTokenValid);
     }
 }

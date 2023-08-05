@@ -22,6 +22,7 @@ public class ValidationService {
         }
         if (Instant.ofEpochSecond(decodeTokenResult.tokenBody.expiresAt).isBefore(Instant.now())) {
             decodeTokenResult.isTokenValid = false;
+            decodeTokenResult.isTokenExpired = true;
         }
         if (!tokenStorageService.isTokenInStorage(decodeTokenResult.tokenBody.context, encodedToken)) {
             decodeTokenResult.isTokenValid = false;

@@ -59,6 +59,7 @@ public class AccessTokenService {
             validateAccessTokenResult.contextObject = context.getContextObjectById(decodeTokenResult.tokenBody.id);
         } else {
             validateAccessTokenResult.isValid = false;
+            validateAccessTokenResult.isExpired = decodeTokenResult.isTokenExpired;
         }
 
         return validateAccessTokenResult;
