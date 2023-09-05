@@ -6,7 +6,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.security.SignatureException;
+import io.jsonwebtoken.security.WeakKeyException;
 
 public class TokenDecoder<T> {
     private final JwtParser jwtParser;
@@ -27,7 +29,7 @@ public class TokenDecoder<T> {
             var tokenBody = objectMapper.readValue(subject, tokenBodyTypeReference);
             result.isTokenValid = true;
             result.tokenBody = tokenBody;
-        } catch (JsonProcessingException | MalformedJwtException | SignatureException e) {
+        } catch (JsonProcessingException | MalformedJwtException | SignatureException | WeakKeyException | DecodingException | IllegalArgumentException e) {
             result.isTokenValid = false;
             result.decodeException = e;
         }
