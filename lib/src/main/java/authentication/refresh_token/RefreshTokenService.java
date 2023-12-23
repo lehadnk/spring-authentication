@@ -9,8 +9,8 @@ import authentication.jwt.dto.TokenType;
 import authentication.refresh_token.dto.TokenExchangeResult;
 import authentication.token_storage.TokenStorageService;
 import authentication.validation.ValidationService;
-import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.sql.Date;
 import java.time.Instant;
 
 public class RefreshTokenService {
@@ -42,7 +42,7 @@ public class RefreshTokenService {
 
         var tokenBody = new TokenBody<>();
         tokenBody.id = context.getContextObjectId(contextObject);
-        tokenBody.expiresAt = (Instant.now().toEpochMilli() / 1000) + context.getRefreshTokenExpirationTime();
+        tokenBody.expiresAt = Date.from(Instant.now().plus(context.getRefreshTokenExpirationTime(), java.time.temporal.ChronoUnit.SECONDS));
         tokenBody.context = contextName;
         tokenBody.payload = context.serializeRefreshTokenPayload(contextObject);
         tokenBody.tokenType = TokenType.REFRESH_TOKEN;
@@ -55,11 +55,10 @@ public class RefreshTokenService {
 
     public <TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> TokenExchangeResult exchangeRefreshTokenForAuthorizationToken(
             String contextName,
-            String refreshToken,
-            TypeReference<TokenBody<TRefreshTokenPayloadObject>> tokenBodyTypeReference
+            String refreshToken
     ) {
         AuthorizationContextProviderInterface<TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> context = this.contextService.getContextByName(contextName);
-        var decodedToken = this.jwtService.decodeToken(refreshToken, tokenBodyTypeReference);
+        var decodedToken = this.jwtService.decodeToken(refreshToken, context.getRefreshTokenPayloadClass());
         this.validationService.validateToken(refreshToken, decodedToken);
 
         var tokenExchangeResult = new TokenExchangeResult();

@@ -8,9 +8,10 @@ import authentication.jwt.dto.TokenBody;
 import authentication.jwt.dto.TokenType;
 import authentication.token_storage.TokenStorageService;
 import authentication.validation.ValidationService;
-import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.sql.Date;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 public class AccessTokenService {
     private final JwtService jwtService;
@@ -36,7 +37,7 @@ public class AccessTokenService {
 
         var tokenBody = new TokenBody<>();
         tokenBody.id = context.getContextObjectId(contextObject);
-        tokenBody.expiresAt = (Instant.now().toEpochMilli() / 1000) + context.getAccessTokenExpirationTime();
+        tokenBody.expiresAt = Date.from(Instant.now().plus(context.getAccessTokenExpirationTime(), ChronoUnit.SECONDS));
         tokenBody.context = contextName;
         tokenBody.payload = context.serializeAccessTokenPayload(contextObject);
         tokenBody.tokenType = TokenType.ACCESS_TOKEN;
@@ -47,15 +48,15 @@ public class AccessTokenService {
         return tokenString;
     }
 
-    public <TTokenBodyType, TContextObjectType> ValidateAccessTokenResult<TContextObjectType> validateAuthenticationToken(String contextName, String token, TypeReference<TokenBody<TTokenBodyType>> tokenBodyTypeReference)
+    public <TTokenBodyType, TContextObjectType> ValidateAccessTokenResult<TContextObjectType> validateAccessToken(String contextName, String token)
     {
-        var decodeTokenResult = this.jwtService.decodeToken(token, tokenBodyTypeReference);
+        AuthorizationContextProviderInterface<TContextObjectType, ?, ?> context = this.contextService.getContextByName(contextName);
+        var decodeTokenResult = this.jwtService.decodeToken(token, context.getAccessTokenPayloadClass());
         this.validationService.validateToken(token, decodeTokenResult);
 
         var validateAccessTokenResult = new ValidateAccessTokenResult<TContextObjectType>();
         if (decodeTokenResult.isTokenValid) {
             validateAccessTokenResult.isValid = true;
-            AuthorizationContextProviderInterface<TContextObjectType, ?, ?> context = this.contextService.getContextByName(contextName);
             validateAccessTokenResult.contextObject = context.getContextObjectById(decodeTokenResult.tokenBody.id);
         } else {
             validateAccessTokenResult.isValid = false;

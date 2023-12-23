@@ -1,9 +1,10 @@
 package authentication.jwt.business;
 
 import authentication.jwt.dto.TokenBody;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.JwtBuilder;
+
+import java.time.Instant;
+import java.util.Date;
 
 public class TokenEncoder<T> {
     private final JwtBuilder jwtBuilder;
@@ -16,12 +17,13 @@ public class TokenEncoder<T> {
 
     public String encodeToken(TokenBody<T> tokenBody)
     {
-        var mapper = new ObjectMapper();
-        try {
-            var subject = mapper.writeValueAsString(tokenBody);
-            return this.jwtBuilder.setSubject(subject).compact();
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
+        return this.jwtBuilder
+                .expiration(tokenBody.expiresAt)
+                .subject(tokenBody.id)
+                .issuedAt(Date.from(Instant.now()))
+                .audience().add(tokenBody.context).and()
+                .claim("tokenType", tokenBody.tokenType)
+                .claim("payload", tokenBody.payload)
+                .compact();
     }
 }

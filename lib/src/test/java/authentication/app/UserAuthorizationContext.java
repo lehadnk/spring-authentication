@@ -16,8 +16,13 @@ public class UserAuthorizationContext implements AuthorizationContextProviderInt
     }
 
     @Override
-    public Class<UserAccessTokenPayload> getPayloadClass() {
+    public Class<UserAccessTokenPayload> getAccessTokenPayloadClass() {
         return UserAccessTokenPayload.class;
+    }
+
+    @Override
+    public Class<UserRefreshTokenPayload> getRefreshTokenPayloadClass() {
+        return UserRefreshTokenPayload.class;
     }
 
     @Override

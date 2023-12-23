@@ -4,7 +4,6 @@ import authentication.jwt.business.TokenDecoder;
 import authentication.jwt.business.TokenEncoder;
 import authentication.jwt.dto.DecodeTokenResult;
 import authentication.jwt.dto.TokenBody;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 public class JwtService {
     private final JwtFactory jwtFactory;
@@ -21,9 +20,9 @@ public class JwtService {
         return tokenEncoder.encodeToken(tokenBody);
     }
 
-    public <T> DecodeTokenResult<T> decodeToken(String token, TypeReference<TokenBody<T>> tokenBodyTypeReference)
+    public <T> DecodeTokenResult<T> decodeToken(String token, Class<T> tokenPayloadClassReference)
     {
-        TokenDecoder<T> tokenDecoder = this.jwtFactory.createTokenDecoder();
-        return tokenDecoder.decode(token, tokenBodyTypeReference);
+        TokenDecoder<T> tokenDecoder = this.jwtFactory.createTokenDecoder(tokenPayloadClassReference);
+        return tokenDecoder.decode(token, tokenPayloadClassReference);
     }
 }

@@ -9,7 +9,11 @@ public interface AuthorizationContextProviderInterface<TContextObject, TAccessTo
     Long getAccessTokenExpirationTime();
     Long getRefreshTokenExpirationTime();
 
-    default Class<TAccessTokenPayloadObject> getPayloadClass() {
+    default Class<TAccessTokenPayloadObject> getAccessTokenPayloadClass() {
+        return null;
+    }
+
+    default Class<TRefreshTokenPayloadObject> getRefreshTokenPayloadClass() {
         return null;
     }
 

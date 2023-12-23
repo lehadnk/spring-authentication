@@ -4,7 +4,6 @@ import authentication.access_token.dto.ValidateAccessTokenResult;
 import authentication.app.User;
 import authentication.app.UserAccessTokenPayload;
 import authentication.app.UserAuthorizationContext;
-import authentication.app.UserRefreshTokenPayload;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.context.exceptions.AuthorizationContextInitializationException;
@@ -12,18 +11,19 @@ import authentication.jwt.JwtFactory;
 import authentication.jwt.JwtService;
 import authentication.jwt.dto.TokenBody;
 import authentication.jwt.dto.TokenType;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.junit.Test;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.UUID;
 
 import static org.junit.Assert.*;
 
 public class LibraryTest {
-    private final static TypeReference<TokenBody<UserAccessTokenPayload>> userAccessTokenPayloadReference = new TypeReference<>() {};
-    private final static TypeReference<TokenBody<UserRefreshTokenPayload>> userRefreshTokenPayloadReference = new TypeReference<>() {};
     final private TestFactory testFactory = new TestFactory();
 
     @Test
@@ -31,7 +31,7 @@ public class LibraryTest {
     {
         var incorrectToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ7XCJjb250ZXh0XCI6XCJ1c2VyXCIsXCJpZFwiOlwiNzc3MGIxYjQtMTkxYy0xMWVlLWJlNTYtMDI0MmFjMTIwMDAyXCIsXCJ0b2tlblR5cGVcIjpcIlJFRlJFU0hfVE9LRU5cIixcImV4cGlyZXNBdFwiOjE2ODg0MDUzNTUsXCJwYXlsb2FkXCI6e1wiaWRcIjpcIjc3NzBiMWI0LTE5MWMtMTFlZS1iZTU2LTAyNDJhYzEyMDAwMlwifX0ifQ.cpLC-DEH3dgZeqPsL6PeWaa2gQi-yAmHK8JjSLLEmaM";
         var refreshTokenService = this.testFactory.createRefreshTokenService();
-        var tokenExchangeResponse = refreshTokenService.exchangeRefreshTokenForAuthorizationToken("user", incorrectToken, LibraryTest.userRefreshTokenPayloadReference);
+        var tokenExchangeResponse = refreshTokenService.exchangeRefreshTokenForAuthorizationToken("user", incorrectToken);
 
         assertFalse(tokenExchangeResponse.isSuccess);
         assertNull(tokenExchangeResponse.accessToken);
@@ -47,11 +47,11 @@ public class LibraryTest {
         user.email = "7770b1b4-191c-11ee-be56-0242ac120002@gmail.com";
 
         var refreshToken = refreshTokenService.issueRefreshToken("user", user);
-        var tokenExchangeResponse = refreshTokenService.exchangeRefreshTokenForAuthorizationToken("user", refreshToken, LibraryTest.userRefreshTokenPayloadReference);
+        var tokenExchangeResponse = refreshTokenService.exchangeRefreshTokenForAuthorizationToken("user", refreshToken);
         assertTrue(tokenExchangeResponse.isSuccess);
 
         var jwtService = this.testFactory.createJwtService();
-        var decodeTokenResult = jwtService.decodeToken(tokenExchangeResponse.accessToken, LibraryTest.userAccessTokenPayloadReference);
+        var decodeTokenResult = jwtService.decodeToken(tokenExchangeResponse.accessToken, new UserAuthorizationContext().getAccessTokenPayloadClass());
         assertTrue(decodeTokenResult.isTokenValid);
         assertEquals(user.id.toString(), decodeTokenResult.tokenBody.id);
     }
@@ -80,13 +80,13 @@ public class LibraryTest {
 
         var token = authenticationTokenService.issueAccessToken("user", user);
 
-        var decodeTokenResult = jwtService.decodeToken(token, LibraryTest.userAccessTokenPayloadReference);
+        var decodeTokenResult = jwtService.decodeToken(token, new UserAuthorizationContext().getAccessTokenPayloadClass());
         assertTrue(decodeTokenResult.isTokenValid);
         assertEquals(user.id.toString(), decodeTokenResult.tokenBody.id);
         assertEquals(TokenType.ACCESS_TOKEN, decodeTokenResult.tokenBody.tokenType);
         assertEquals(user.email, decodeTokenResult.tokenBody.payload.email);
-        Long expectedTokenExpiresAt = (Instant.now().toEpochMilli() / 1000) + 60L;
-        assertEquals(expectedTokenExpiresAt, decodeTokenResult.tokenBody.expiresAt);
+        var expectedTokenExpiresAt = Date.from(Instant.now().plus(60, ChronoUnit.SECONDS));
+        assertEquals(expectedTokenExpiresAt.toString(), decodeTokenResult.tokenBody.expiresAt.toString());
     }
 
     @Test
@@ -100,7 +100,7 @@ public class LibraryTest {
         var refreshToken = refreshTokenService.issueRefreshToken("user", user);
 
         var jwtService = this.testFactory.createJwtService();
-        var decodeTokenResult = jwtService.decodeToken(refreshToken, LibraryTest.userRefreshTokenPayloadReference);
+        var decodeTokenResult = jwtService.decodeToken(refreshToken, new UserAuthorizationContext().getRefreshTokenPayloadClass());
 
         assertTrue(decodeTokenResult.isTokenValid);
         assertEquals(user.id.toString(), decodeTokenResult.tokenBody.id);
@@ -131,7 +131,7 @@ public class LibraryTest {
     }
 
     @Test
-    public void testsTokenEncodeAndDecode() {
+    public void testsTokenEncodeAndDecode() throws ParseException {
         var jwtService = this.testFactory.createJwtService();
 
         var tokenPayload = new UserAccessTokenPayload();
@@ -140,11 +140,13 @@ public class LibraryTest {
         var tokenBody = new TokenBody<UserAccessTokenPayload>();
         tokenBody.id = "1";
         tokenBody.context = "user";
-        tokenBody.expiresAt = 1688153468L;
+
+        var formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        tokenBody.expiresAt = formatter.parse("2024-04-30T10:00:00.000+0000");
         tokenBody.payload = tokenPayload;
         var encodedToken = jwtService.encodeToken(tokenBody);
 
-        var decodeTokenResult = jwtService.decodeToken(encodedToken, LibraryTest.userAccessTokenPayloadReference);
+        var decodeTokenResult = jwtService.decodeToken(encodedToken, new UserAuthorizationContext().getAccessTokenPayloadClass());
         assertTrue(decodeTokenResult.isTokenValid);
         assertNotNull(decodeTokenResult.tokenBody);
         assertNotNull(decodeTokenResult.tokenBody.payload);
@@ -161,7 +163,7 @@ public class LibraryTest {
         var accessTokenService = this.testFactory.createAccessTokenService();
         var accessToken = accessTokenService.issueAccessToken("user", user);
 
-        ValidateAccessTokenResult<User> validateAccessTokenResult = accessTokenService.validateAuthenticationToken("user", accessToken, LibraryTest.userAccessTokenPayloadReference);
+        ValidateAccessTokenResult<User> validateAccessTokenResult = accessTokenService.validateAccessToken("user", accessToken);
         assertTrue(validateAccessTokenResult.isValid);
         assertEquals(user.id, validateAccessTokenResult.contextObject.id);
     }
@@ -170,7 +172,7 @@ public class LibraryTest {
     public void testDecodeIncorrectToken()
     {
         var accessTokenService = this.testFactory.createAccessTokenService();
-        var validateAccessTokenResult = accessTokenService.validateAuthenticationToken("user", "qwe123", LibraryTest.userAccessTokenPayloadReference);
+        var validateAccessTokenResult = accessTokenService.validateAccessToken("user", "qwe123");
         assertFalse(validateAccessTokenResult.isValid);
         assertNull(validateAccessTokenResult.contextObject);
     }
@@ -179,27 +181,48 @@ public class LibraryTest {
     public void testDecodeMalformedToken()
     {
         var jwtService = this.testFactory.createJwtService();
-        var tokenDecodeResult = jwtService.decodeToken("Bearer qwe", LibraryTest.userAccessTokenPayloadReference);
+        var tokenDecodeResult = jwtService.decodeToken("Bearer qwe", new UserAuthorizationContext().getAccessTokenPayloadClass());
         assertFalse(tokenDecodeResult.isTokenValid);
     }
 
     @Test
-    public void testDecodeTokenSignedWithIncorrectKey()
-    {
+    public void testDecodeTokenSignedWithIncorrectKey() throws ParseException {
         var jwtFactory1 = new JwtFactory("testtesttesttesttesttesttesttesttesttesttesttest");
         var jwtService1 = new JwtService(jwtFactory1);
 
         var tokenBody = new TokenBody<UserAccessTokenPayload>();
         tokenBody.id = "1";
         tokenBody.context = "user";
-        tokenBody.expiresAt = 1688153468L;
+
+        var formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        tokenBody.expiresAt = formatter.parse("2024-04-30T10:00:00.000+0000");
 
         var tokenGeneratedByService1 = jwtService1.encodeToken(tokenBody);
 
         var jwtFactory2 = new JwtFactory("qweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqwe");
         var jwtService2 = new JwtService(jwtFactory2);
 
-        var tokenDecodeResult = jwtService2.decodeToken(tokenGeneratedByService1, LibraryTest.userAccessTokenPayloadReference);
+        var tokenDecodeResult = jwtService2.decodeToken(tokenGeneratedByService1, new UserAuthorizationContext().getAccessTokenPayloadClass());
         assertFalse(tokenDecodeResult.isTokenValid);
+    }
+
+    @Test
+    public void testDecodeExpiredToken() throws ParseException {
+        var jwtService = this.testFactory.createJwtService();
+
+        var tokenPayload = new UserAccessTokenPayload();
+        tokenPayload.email = "lehadnk@gmail.com";
+
+        var tokenBody = new TokenBody<UserAccessTokenPayload>();
+        tokenBody.id = "1";
+        tokenBody.context = "user";
+
+        var formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        tokenBody.expiresAt = formatter.parse("2020-04-30T10:00:00.000+0000");
+        tokenBody.payload = tokenPayload;
+        var encodedToken = jwtService.encodeToken(tokenBody);
+
+        var decodeTokenResult = jwtService.decodeToken(encodedToken, new UserAuthorizationContext().getAccessTokenPayloadClass());
+        assertFalse(decodeTokenResult.isTokenValid);
     }
 }

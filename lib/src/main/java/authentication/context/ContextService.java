@@ -23,7 +23,6 @@ public class ContextService {
 
     public <TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> AuthorizationContextProviderInterface<TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> getContextByName(String name)
     {
-        // @todo We should somehow do validation here
         return this.contextProviders.get(name);
     }
 }
