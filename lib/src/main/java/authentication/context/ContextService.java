@@ -14,7 +14,7 @@ public class ContextService {
     ) throws AuthorizationContextInitializationException {
         for (var contextProvider : contextProviders) {
             if (this.contextProviders.containsKey(contextProvider.getContextName())) {
-                throw new AuthorizationContextInitializationException();
+                throw new AuthorizationContextInitializationException("Context with name " + contextProvider.getContextName() + " is already defined");
             }
 
             this.contextProviders.put(contextProvider.getContextName(), contextProvider);

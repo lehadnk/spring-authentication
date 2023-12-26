@@ -1,7 +1,8 @@
 package authentication;
 
-import authentication.app.UserAuthorizationContext;
+import authentication.app.UserAuthorizationContextProvider;
 import authentication.access_token.AccessTokenService;
+import authentication.app.UserNoPayloadAuthorizationContextProvider;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.context.exceptions.AuthorizationContextInitializationException;
@@ -31,7 +32,8 @@ public class TestFactory {
     public List<AuthorizationContextProviderInterface<?, ?, ?>> createTestContextProvider()
     {
         var contextProvidersList = new ArrayList<AuthorizationContextProviderInterface<?, ?, ?>>(1);
-        contextProvidersList.add(new UserAuthorizationContext());
+        contextProvidersList.add(new UserAuthorizationContextProvider());
+        contextProvidersList.add(new UserNoPayloadAuthorizationContextProvider());
         return contextProvidersList;
     }
 

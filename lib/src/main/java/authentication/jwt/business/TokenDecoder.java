@@ -22,14 +22,17 @@ public class TokenDecoder<T> {
 
         try {
             var jwsClaims = jwtParser.parseSignedClaims(token);
-            var payload = jwsClaims.getPayload().get("payload", tokenPayloadClassReference);
 
             var tokenBody = new TokenBody<T>();
-            tokenBody.payload = payload;
             tokenBody.expiresAt = jwsClaims.getPayload().getExpiration();
             tokenBody.context = jwsClaims.getPayload().getAudience().stream().findFirst().orElseThrow();
             tokenBody.tokenType = jwsClaims.getPayload().get("tokenType", TokenType.class);
             tokenBody.id = jwsClaims.getPayload().getSubject();
+
+            if (tokenPayloadClassReference != null) {
+                var payload = jwsClaims.getPayload().get("payload", tokenPayloadClassReference);
+                tokenBody.payload = payload;
+            }
 
             result.isTokenValid = true;
             result.tokenBody = tokenBody;

@@ -1,10 +1,12 @@
 package authentication.app;
 
 import authentication.context.AuthorizationContextProviderInterface;
+import authentication.jwt.dto.TokenBody;
 
+import java.util.Objects;
 import java.util.UUID;
 
-public class UserAuthorizationContext implements AuthorizationContextProviderInterface<User, UserAccessTokenPayload, UserRefreshTokenPayload> {
+public class UserAuthorizationContextProvider implements AuthorizationContextProviderInterface<User, UserAccessTokenPayload, UserRefreshTokenPayload> {
     @Override
     public Class<User> getContextObjectClass() {
         return User.class;
@@ -49,7 +51,7 @@ public class UserAuthorizationContext implements AuthorizationContextProviderInt
     }
 
     @Override
-    public UserAccessTokenPayload serializeAccessTokenPayload(User user)
+    public UserAccessTokenPayload serializeAccessTokenPayload(User user, TokenBody<UserAccessTokenPayload> tokenBody, Object extras)
     {
         var payload = new UserAccessTokenPayload();
         payload.email = user.email;
@@ -57,7 +59,7 @@ public class UserAuthorizationContext implements AuthorizationContextProviderInt
     }
 
     @Override
-    public UserRefreshTokenPayload serializeRefreshTokenPayload(User user)
+    public UserRefreshTokenPayload serializeRefreshTokenPayload(User user, TokenBody<UserRefreshTokenPayload> tokenBody, Object extras)
     {
         var payload = new UserRefreshTokenPayload();
         payload.id = user.id;

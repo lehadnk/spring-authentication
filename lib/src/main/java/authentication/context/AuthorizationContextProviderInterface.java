@@ -1,6 +1,8 @@
 package authentication.context;
 
 
+import authentication.jwt.dto.TokenBody;
+
 public interface AuthorizationContextProviderInterface<TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> {
     String getContextName();
     Class<TContextObject> getContextObjectClass();
@@ -17,12 +19,12 @@ public interface AuthorizationContextProviderInterface<TContextObject, TAccessTo
         return null;
     }
 
-    default TAccessTokenPayloadObject serializeAccessTokenPayload(TContextObject contextObject)
+    default TAccessTokenPayloadObject serializeAccessTokenPayload(TContextObject contextObject, TokenBody<TAccessTokenPayloadObject> tokenBody, Object extras)
     {
         return null;
     }
 
-    default TRefreshTokenPayloadObject serializeRefreshTokenPayload(TContextObject contextObject)
+    default TRefreshTokenPayloadObject serializeRefreshTokenPayload(TContextObject contextObject, TokenBody<TRefreshTokenPayloadObject> tokenBody, Object extras)
     {
         return null;
     }

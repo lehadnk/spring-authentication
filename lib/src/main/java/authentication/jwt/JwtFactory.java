@@ -11,6 +11,7 @@ import io.jsonwebtoken.jackson.io.JacksonDeserializer;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 
 public class JwtFactory {
@@ -37,12 +38,15 @@ public class JwtFactory {
 
     protected <T> JwtParser createJwtParser(Class<T> tokenPayloadClassReference)
     {
+        var payloadObjectMap = new HashMap<String, Object>();
+        if (tokenPayloadClassReference != null) {
+            payloadObjectMap.put("payload", tokenPayloadClassReference);
+        }
+        payloadObjectMap.put("tokenType", TokenType.class);
+
         return Jwts.parser()
                 .verifyWith(this.createSecretKeySpec(this.jwtSecret))
-                .json(new JacksonDeserializer(Map.of(
-                        "payload", tokenPayloadClassReference,
-                        "tokenType", TokenType.class
-                )))
+                .json(new JacksonDeserializer(payloadObjectMap))
                 .build();
     }
 
@@ -55,7 +59,7 @@ public class JwtFactory {
 
     public <T> TokenDecoder<T> createTokenDecoder(Class<T> tokenPayloadClassReference)
     {
-        return new TokenDecoder<>(
+        return new TokenDecoder<T>(
                 this.createJwtParser(tokenPayloadClassReference)
         );
     }

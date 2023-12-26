@@ -1,7 +1,8 @@
 package authentication.access_token.dto;
 
-public class ValidateAccessTokenResult<T> {
+public class ValidateAccessTokenResult<TContextObject, TAccessTokenPayloadObject> {
     public Boolean isValid;
     public Boolean isExpired = false;
-    public T contextObject;
+    public TContextObject contextObject;
+    public TAccessTokenPayloadObject tokenPayload;
 }

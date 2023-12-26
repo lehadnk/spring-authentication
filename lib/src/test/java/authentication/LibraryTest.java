@@ -3,7 +3,8 @@ package authentication;
 import authentication.access_token.dto.ValidateAccessTokenResult;
 import authentication.app.User;
 import authentication.app.UserAccessTokenPayload;
-import authentication.app.UserAuthorizationContext;
+import authentication.app.UserAuthorizationContextProvider;
+import authentication.app.UserNoPayloadAuthorizationContextProvider;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.context.exceptions.AuthorizationContextInitializationException;
@@ -51,7 +52,7 @@ public class LibraryTest {
         assertTrue(tokenExchangeResponse.isSuccess);
 
         var jwtService = this.testFactory.createJwtService();
-        var decodeTokenResult = jwtService.decodeToken(tokenExchangeResponse.accessToken, new UserAuthorizationContext().getAccessTokenPayloadClass());
+        var decodeTokenResult = jwtService.decodeToken(tokenExchangeResponse.accessToken, new UserAuthorizationContextProvider().getAccessTokenPayloadClass());
         assertTrue(decodeTokenResult.isTokenValid);
         assertEquals(user.id.toString(), decodeTokenResult.tokenBody.id);
     }
@@ -80,7 +81,7 @@ public class LibraryTest {
 
         var token = authenticationTokenService.issueAccessToken("user", user);
 
-        var decodeTokenResult = jwtService.decodeToken(token, new UserAuthorizationContext().getAccessTokenPayloadClass());
+        var decodeTokenResult = jwtService.decodeToken(token, new UserAuthorizationContextProvider().getAccessTokenPayloadClass());
         assertTrue(decodeTokenResult.isTokenValid);
         assertEquals(user.id.toString(), decodeTokenResult.tokenBody.id);
         assertEquals(TokenType.ACCESS_TOKEN, decodeTokenResult.tokenBody.tokenType);
@@ -100,7 +101,7 @@ public class LibraryTest {
         var refreshToken = refreshTokenService.issueRefreshToken("user", user);
 
         var jwtService = this.testFactory.createJwtService();
-        var decodeTokenResult = jwtService.decodeToken(refreshToken, new UserAuthorizationContext().getRefreshTokenPayloadClass());
+        var decodeTokenResult = jwtService.decodeToken(refreshToken, new UserAuthorizationContextProvider().getRefreshTokenPayloadClass());
 
         assertTrue(decodeTokenResult.isTokenValid);
         assertEquals(user.id.toString(), decodeTokenResult.tokenBody.id);
@@ -124,8 +125,8 @@ public class LibraryTest {
     public void testGetAbsentContext()
     {
         var contextProvidersList = new ArrayList<AuthorizationContextProviderInterface<?, ?, ?>>(1);
-        contextProvidersList.add(new UserAuthorizationContext());
-        contextProvidersList.add(new UserAuthorizationContext());
+        contextProvidersList.add(new UserAuthorizationContextProvider());
+        contextProvidersList.add(new UserAuthorizationContextProvider());
         assertThrows(AuthorizationContextInitializationException.class, () -> new ContextService(contextProvidersList));
 
     }
@@ -146,7 +147,7 @@ public class LibraryTest {
         tokenBody.payload = tokenPayload;
         var encodedToken = jwtService.encodeToken(tokenBody);
 
-        var decodeTokenResult = jwtService.decodeToken(encodedToken, new UserAuthorizationContext().getAccessTokenPayloadClass());
+        var decodeTokenResult = jwtService.decodeToken(encodedToken, new UserAuthorizationContextProvider().getAccessTokenPayloadClass());
         assertTrue(decodeTokenResult.isTokenValid);
         assertNotNull(decodeTokenResult.tokenBody);
         assertNotNull(decodeTokenResult.tokenBody.payload);
@@ -163,9 +164,10 @@ public class LibraryTest {
         var accessTokenService = this.testFactory.createAccessTokenService();
         var accessToken = accessTokenService.issueAccessToken("user", user);
 
-        ValidateAccessTokenResult<User> validateAccessTokenResult = accessTokenService.validateAccessToken("user", accessToken);
+        ValidateAccessTokenResult<User, UserAccessTokenPayload> validateAccessTokenResult = accessTokenService.validateAccessToken("user", accessToken);
         assertTrue(validateAccessTokenResult.isValid);
         assertEquals(user.id, validateAccessTokenResult.contextObject.id);
+        assertEquals(user.email, validateAccessTokenResult.tokenPayload.email);
     }
 
     @Test
@@ -181,7 +183,7 @@ public class LibraryTest {
     public void testDecodeMalformedToken()
     {
         var jwtService = this.testFactory.createJwtService();
-        var tokenDecodeResult = jwtService.decodeToken("Bearer qwe", new UserAuthorizationContext().getAccessTokenPayloadClass());
+        var tokenDecodeResult = jwtService.decodeToken("Bearer qwe", new UserAuthorizationContextProvider().getAccessTokenPayloadClass());
         assertFalse(tokenDecodeResult.isTokenValid);
     }
 
@@ -202,7 +204,7 @@ public class LibraryTest {
         var jwtFactory2 = new JwtFactory("qweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqwe");
         var jwtService2 = new JwtService(jwtFactory2);
 
-        var tokenDecodeResult = jwtService2.decodeToken(tokenGeneratedByService1, new UserAuthorizationContext().getAccessTokenPayloadClass());
+        var tokenDecodeResult = jwtService2.decodeToken(tokenGeneratedByService1, new UserAuthorizationContextProvider().getAccessTokenPayloadClass());
         assertFalse(tokenDecodeResult.isTokenValid);
     }
 
@@ -222,7 +224,28 @@ public class LibraryTest {
         tokenBody.payload = tokenPayload;
         var encodedToken = jwtService.encodeToken(tokenBody);
 
-        var decodeTokenResult = jwtService.decodeToken(encodedToken, new UserAuthorizationContext().getAccessTokenPayloadClass());
+        var decodeTokenResult = jwtService.decodeToken(encodedToken, new UserAuthorizationContextProvider().getAccessTokenPayloadClass());
         assertFalse(decodeTokenResult.isTokenValid);
+    }
+
+    @Test
+    public void testNoPayloadAuthorizationContextProvider()
+    {
+        var jwtService = this.testFactory.createJwtService();
+        var authenticationTokenService = this.testFactory.createAccessTokenService();
+
+        var user = new User();
+        user.id = UUID.fromString("7770b1b4-191c-11ee-be56-0242ac120002");
+        user.email = "7770b1b4-191c-11ee-be56-0242ac120002@gmail.com";
+
+        var token = authenticationTokenService.issueAccessToken("user-no-payload", user);
+
+        var decodeTokenResult = jwtService.decodeToken(token, new UserNoPayloadAuthorizationContextProvider().getAccessTokenPayloadClass());
+        assertTrue(decodeTokenResult.isTokenValid);
+        assertEquals(user.id.toString(), decodeTokenResult.tokenBody.id);
+        assertEquals(TokenType.ACCESS_TOKEN, decodeTokenResult.tokenBody.tokenType);
+        assertNull(decodeTokenResult.tokenBody.payload);
+        var expectedTokenExpiresAt = Date.from(Instant.now().plus(60, ChronoUnit.SECONDS));
+        assertEquals(expectedTokenExpiresAt.toString(), decodeTokenResult.tokenBody.expiresAt.toString());
     }
 }

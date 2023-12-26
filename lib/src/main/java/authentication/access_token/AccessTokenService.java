@@ -4,6 +4,7 @@ import authentication.access_token.dto.ValidateAccessTokenResult;
 import authentication.context.AuthorizationContextProviderInterface;
 import authentication.context.ContextService;
 import authentication.jwt.JwtService;
+import authentication.jwt.dto.DecodeTokenResult;
 import authentication.jwt.dto.TokenBody;
 import authentication.jwt.dto.TokenType;
 import authentication.token_storage.TokenStorageService;
@@ -33,14 +34,19 @@ public class AccessTokenService {
 
     public <TContextObject, TAccessTokenPayloadObject> String issueAccessToken(String contextName, TContextObject contextObject)
     {
+        return this.issueAccessToken(contextName, contextObject, null);
+    }
+
+    public <TContextObject, TAccessTokenPayloadObject> String issueAccessToken(String contextName, TContextObject contextObject, Object extras)
+    {
         AuthorizationContextProviderInterface<TContextObject, TAccessTokenPayloadObject, ?> context = this.contextService.getContextByName(contextName);
 
-        var tokenBody = new TokenBody<>();
+        var tokenBody = new TokenBody<TAccessTokenPayloadObject>();
         tokenBody.id = context.getContextObjectId(contextObject);
         tokenBody.expiresAt = Date.from(Instant.now().plus(context.getAccessTokenExpirationTime(), ChronoUnit.SECONDS));
         tokenBody.context = contextName;
-        tokenBody.payload = context.serializeAccessTokenPayload(contextObject);
         tokenBody.tokenType = TokenType.ACCESS_TOKEN;
+        tokenBody.payload = context.serializeAccessTokenPayload(contextObject, tokenBody, extras);
 
         var tokenString = this.jwtService.encodeToken(tokenBody);
         this.tokenStorageService.addTokenToStorage(contextName, tokenString);
@@ -48,16 +54,17 @@ public class AccessTokenService {
         return tokenString;
     }
 
-    public <TTokenBodyType, TContextObjectType> ValidateAccessTokenResult<TContextObjectType> validateAccessToken(String contextName, String token)
+    public <TContextObject, TAccessTokenPayloadObject> ValidateAccessTokenResult<TContextObject, TAccessTokenPayloadObject> validateAccessToken(String contextName, String token)
     {
-        AuthorizationContextProviderInterface<TContextObjectType, ?, ?> context = this.contextService.getContextByName(contextName);
-        var decodeTokenResult = this.jwtService.decodeToken(token, context.getAccessTokenPayloadClass());
+        AuthorizationContextProviderInterface<TContextObject, ?, ?> context = this.contextService.getContextByName(contextName);
+        DecodeTokenResult<TAccessTokenPayloadObject> decodeTokenResult = (DecodeTokenResult<TAccessTokenPayloadObject>) this.jwtService.decodeToken(token, context.getAccessTokenPayloadClass());
         this.validationService.validateToken(token, decodeTokenResult);
 
-        var validateAccessTokenResult = new ValidateAccessTokenResult<TContextObjectType>();
+        var validateAccessTokenResult = new ValidateAccessTokenResult<TContextObject, TAccessTokenPayloadObject>();
         if (decodeTokenResult.isTokenValid) {
             validateAccessTokenResult.isValid = true;
             validateAccessTokenResult.contextObject = context.getContextObjectById(decodeTokenResult.tokenBody.id);
+            validateAccessTokenResult.tokenPayload = decodeTokenResult.tokenBody.payload;
         } else {
             validateAccessTokenResult.isValid = false;
             validateAccessTokenResult.isExpired = decodeTokenResult.isTokenExpired;

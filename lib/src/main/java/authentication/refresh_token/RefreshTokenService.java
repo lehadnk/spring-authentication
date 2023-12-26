@@ -7,6 +7,7 @@ import authentication.jwt.JwtService;
 import authentication.jwt.dto.TokenBody;
 import authentication.jwt.dto.TokenType;
 import authentication.refresh_token.dto.TokenExchangeResult;
+import authentication.refresh_token.dto.ValidateRefreshTokenResult;
 import authentication.token_storage.TokenStorageService;
 import authentication.validation.ValidationService;
 
@@ -34,18 +35,47 @@ public class RefreshTokenService {
         this.tokenStorageService = tokenStorageService;
     }
 
+    public <TContextObject, TRefreshTokenPayloadObject> ValidateRefreshTokenResult<TContextObject, TRefreshTokenPayloadObject> validateRefreshToken(
+            String contextName,
+            String token
+    ) {
+        AuthorizationContextProviderInterface<TContextObject, ?, TRefreshTokenPayloadObject> context = this.contextService.getContextByName(contextName);
+        var decodedToken = this.jwtService.decodeToken(token, context.getRefreshTokenPayloadClass());
+        this.validationService.validateToken(token, decodedToken);
+
+        var validateRefreshTokenResult = new ValidateRefreshTokenResult<TContextObject, TRefreshTokenPayloadObject>();
+        if (!decodedToken.isTokenValid || !decodedToken.tokenBody.tokenType.equals(TokenType.REFRESH_TOKEN)) {
+            validateRefreshTokenResult.isValid = false;
+            return validateRefreshTokenResult;
+        }
+
+        var contextObject = context.getContextObjectById(decodedToken.tokenBody.id);
+        validateRefreshTokenResult.isValid = true;
+        validateRefreshTokenResult.contextObject = contextObject;
+        validateRefreshTokenResult.tokenPayload = decodedToken.tokenBody.payload;
+        return validateRefreshTokenResult;
+    }
+
     public <TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> String issueRefreshToken(
             String contextName,
             TContextObject contextObject
     ) {
+        return this.issueRefreshToken(contextName, contextObject, null);
+    }
+
+    public <TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> String issueRefreshToken(
+            String contextName,
+            TContextObject contextObject,
+            Object extras
+    ) {
         AuthorizationContextProviderInterface<TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> context = this.contextService.getContextByName(contextName);
 
-        var tokenBody = new TokenBody<>();
+        var tokenBody = new TokenBody<TRefreshTokenPayloadObject>();
         tokenBody.id = context.getContextObjectId(contextObject);
         tokenBody.expiresAt = Date.from(Instant.now().plus(context.getRefreshTokenExpirationTime(), java.time.temporal.ChronoUnit.SECONDS));
         tokenBody.context = contextName;
-        tokenBody.payload = context.serializeRefreshTokenPayload(contextObject);
         tokenBody.tokenType = TokenType.REFRESH_TOKEN;
+        tokenBody.payload = context.serializeRefreshTokenPayload(contextObject, tokenBody, extras);
 
         var tokenString = this.jwtService.encodeToken(tokenBody);
         this.tokenStorageService.addTokenToStorage(contextName, tokenString);
@@ -57,18 +87,23 @@ public class RefreshTokenService {
             String contextName,
             String refreshToken
     ) {
-        AuthorizationContextProviderInterface<TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> context = this.contextService.getContextByName(contextName);
-        var decodedToken = this.jwtService.decodeToken(refreshToken, context.getRefreshTokenPayloadClass());
-        this.validationService.validateToken(refreshToken, decodedToken);
+        return this.exchangeRefreshTokenForAuthorizationToken(contextName, refreshToken, null);
+    }
 
+    public <TContextObject, TAccessTokenPayloadObject, TRefreshTokenPayloadObject> TokenExchangeResult exchangeRefreshTokenForAuthorizationToken(
+            String contextName,
+            String refreshToken,
+            Object extras
+    ) {
+        ValidateRefreshTokenResult<TContextObject, TRefreshTokenPayloadObject> validateTokenResult = this.validateRefreshToken(contextName, refreshToken);
         var tokenExchangeResult = new TokenExchangeResult();
-        if (!decodedToken.isTokenValid) {
+
+        if (!validateTokenResult.isValid) {
             tokenExchangeResult.isSuccess = false;
             return tokenExchangeResult;
         }
 
-        var contextObject = context.getContextObjectById(decodedToken.tokenBody.id);
-        tokenExchangeResult.accessToken = this.accessTokenService.issueAccessToken(contextName, contextObject);
+        tokenExchangeResult.accessToken = this.accessTokenService.issueAccessToken(contextName, validateTokenResult.contextObject, extras);
         tokenExchangeResult.isSuccess = true;
         return tokenExchangeResult;
     }
