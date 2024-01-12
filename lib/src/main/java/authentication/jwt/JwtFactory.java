@@ -10,6 +10,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.jackson.io.JacksonDeserializer;
 
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +27,7 @@ public class JwtFactory {
     protected SecretKeySpec createSecretKeySpec(String jwtSecret)
     {
         return new SecretKeySpec(
-                Base64.getDecoder().decode(jwtSecret),
+                jwtSecret.getBytes(StandardCharsets.UTF_8),
                 SignatureAlgorithm.HS256.getJcaName()
         );
     }
