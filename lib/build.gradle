@@ -2,16 +2,18 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'jacoco'
+    id 'cl.franciscosolis.sonatype-central-upload' version '1.0.0'
 }
 
 version = '1.1.1'
-group = 'com.github.lehadnk'
+group = 'io.github.lehadnk'
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(20)
     }
     withSourcesJar()
+    withJavadocJar()
 }
 
 jar {
@@ -33,25 +35,6 @@ dependencies {
     compileOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication){
-            artifactId = 'authentication'
-            from components.java
-        }
-    }
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = "https://maven.pkg.github.com/lehadnk/spring-authentication"
-            credentials {
-                username = System.getenv("GITHUB_USERNAME")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
-}
-
 test {
     finalizedBy jacocoTestReport
 }
@@ -62,4 +45,54 @@ jacocoTestReport {
 
 jacoco {
     toolVersion = "0.8.9"
+}
+
+sonatypeCentralUpload {
+    username = sonatypeTokenUsername
+    password = sonatypeTokenPassword
+
+    archives = files(
+            file("build/libs/021-authentication-${version}.jar"),
+            file("build/libs/021-authentication-${version}-sources.jar"),
+            file("build/libs/021-authentication-${version}-javadoc.jar"),
+    )
+
+    pom = file("build/publications/mavenJava/pom-default.xml")
+
+    publicKey = new File(pgpPublicKeyPath).text
+    signingKeyPassphrase = pgpPassphrase
+    signingKey = new File(pgpPrivateKeyPath).text
+}
+
+tasks.sonatypeCentralUpload.dependsOn('jar', 'sourcesJar', 'javadocJar', 'generatePomFileForMavenJavaPublication')
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = '021-authentication'
+            pom {
+                name = '021-authentication'
+                description = 'Authentication library for 021 studio projects'
+                url = 'https://github.com/lehadnk/authentication'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'lehadnk'
+                        name = 'Alexey Zauzin'
+                        email = 'lehadnk@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git@github.com:lehadnk/authentication.git'
+                    developerConnection = 'scm:git:git@github.com:lehadnk/authentication.git'
+                    url = 'https://github.com/lehadnk/authentication'
+                }
+            }
+        }
+    }
 }

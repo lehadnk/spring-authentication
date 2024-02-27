@@ -64,3 +64,6 @@ authentication:
     jwt:
         secret: secrety-secret
 ```
+
+# Publishing to remote repository
+`./gradlew clean sonatypeCentralUpload`

@@ -12,5 +12,6 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.4.0'
 }
 
-rootProject.name = 'authentication'
+rootProject.name = '021-authentication'
 include('lib')
+project(':lib').name = '021-authentication'
